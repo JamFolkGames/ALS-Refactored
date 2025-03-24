@@ -142,7 +142,7 @@ public:
 	virtual void Restart() override;
 
 public:
-	const UAlsCharacterSettings* GetSettings() const;
+	virtual UAlsCharacterSettings* GetSettings() const;
 
 protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "Als Character", Meta = (ReturnDisplayName = "Handled"))
@@ -609,11 +609,6 @@ private:
 
 	void DisplayDebugMantling(const UCanvas* Canvas, float Scale, float HorizontalLocation, float& VerticalLocation) const;
 };
-
-inline const UAlsCharacterSettings* AAlsCharacter::GetSettings() const
-{
-	return Settings;
-}
 
 inline const FGameplayTag& AAlsCharacter::GetViewMode() const
 {

@@ -146,7 +146,7 @@ void AAlsCharacter::PostInitializeComponents()
 
 void AAlsCharacter::BeginPlay()
 {
-	ALS_ENSURE(IsValid(Settings));
+	ALS_ENSURE(IsValid(GetSettings()));
 	ALS_ENSURE(IsValid(MovementSettings));
 	std::ignore = ALS_ENSURE(AnimationInstance.IsValid());
 
@@ -172,8 +172,8 @@ void AAlsCharacter::BeginPlay()
 
 	RefreshMeshProperties();
 
-	ViewState.NetworkSmoothing.bEnabled |= IsValid(Settings) &&
-		Settings->View.bEnableNetworkSmoothing && GetLocalRole() == ROLE_SimulatedProxy;
+	ViewState.NetworkSmoothing.bEnabled |= IsValid(GetSettings()) &&
+		GetSettings()->View.bEnableNetworkSmoothing && GetLocalRole() == ROLE_SimulatedProxy;
 
 	// Update states to use the initial desired values.
 
@@ -218,8 +218,8 @@ void AAlsCharacter::PostNetReceiveLocationAndRotation()
 	{
 		const auto NewLocation{FRepMovement::RebaseOntoLocalOrigin(GetReplicatedMovement().Location, this)};
 
-		bTeleported |= IsValid(Settings) &&
-			FVector::DistSquared(PreviousLocation, NewLocation) > FMath::Square(Settings->TeleportDistanceThreshold);
+		bTeleported |= IsValid(GetSettings()) &&
+			FVector::DistSquared(PreviousLocation, NewLocation) > FMath::Square(GetSettings()->TeleportDistanceThreshold);
 	}
 
 	if (bTeleported && AnimationInstance.IsValid())
@@ -263,8 +263,8 @@ void AAlsCharacter::OnRep_ReplicatedBasedMovement()
 			GetCharacterMovement()->OldBaseLocation + GetCharacterMovement()->OldBaseQuat.RotateVector(BasedMovement.Location)
 		};
 
-		bTeleported |= IsValid(Settings) &&
-			FVector::DistSquared(PreviousLocation, NewLocation) > FMath::Square(Settings->TeleportDistanceThreshold);
+		bTeleported |= IsValid(GetSettings()) &&
+			FVector::DistSquared(PreviousLocation, NewLocation) > FMath::Square(GetSettings()->TeleportDistanceThreshold);
 	}
 
 	if (bTeleported && AnimationInstance.IsValid())
@@ -278,7 +278,7 @@ void AAlsCharacter::Tick(const float DeltaTime)
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AAlsCharacter::Tick"), STAT_AAlsCharacter_Tick, STATGROUP_Als)
 	TRACE_CPUPROFILER_EVENT_SCOPE_STR(__FUNCTION__)
 
-	if (!IsValid(Settings) || !AnimationInstance.IsValid())
+	if (!IsValid(GetSettings()) || !AnimationInstance.IsValid())
 	{
 		Super::Tick(DeltaTime);
 		return;
@@ -318,7 +318,7 @@ void AAlsCharacter::PossessedBy(AController* NewController)
 
 	// Enable view network smoothing on the listen server here because the remote role may not be valid yet during begin play.
 
-	ViewState.NetworkSmoothing.bEnabled |= IsValid(Settings) && Settings->View.bEnableListenServerNetworkSmoothing &&
+	ViewState.NetworkSmoothing.bEnabled |= IsValid(GetSettings()) && GetSettings()->View.bEnableListenServerNetworkSmoothing &&
 		IsNetMode(NM_ListenServer) && GetRemoteRole() == ROLE_AutonomousProxy;
 }
 
@@ -519,13 +519,13 @@ void AAlsCharacter::NotifyLocomotionModeChanged(const FGameplayTag& PreviousLoco
 	if (LocomotionMode == AlsLocomotionModeTags::Grounded &&
 	    PreviousLocomotionMode == AlsLocomotionModeTags::InAir)
 	{
-		if (Settings->Ragdolling.bStartRagdollingOnLand &&
-		    LocomotionState.Velocity.Z <= -Settings->Ragdolling.RagdollingOnLandSpeedThreshold)
+		if (GetSettings()->Ragdolling.bStartRagdollingOnLand &&
+		    LocomotionState.Velocity.Z <= -GetSettings()->Ragdolling.RagdollingOnLandSpeedThreshold)
 		{
 			StartRagdolling();
 		}
-		else if (Settings->Rolling.bStartRollingOnLand &&
-		         LocomotionState.Velocity.Z <= -Settings->Rolling.RollingOnLandSpeedThreshold)
+		else if (GetSettings()->Rolling.bStartRollingOnLand &&
+		         LocomotionState.Velocity.Z <= -GetSettings()->Rolling.RollingOnLandSpeedThreshold)
 		{
 			static constexpr auto PlayRate{1.3f};
 
@@ -560,7 +560,7 @@ void AAlsCharacter::NotifyLocomotionModeChanged(const FGameplayTag& PreviousLoco
 	}
 	else if (LocomotionMode == AlsLocomotionModeTags::InAir &&
 	         LocomotionAction == AlsLocomotionActionTags::Rolling &&
-	         Settings->Rolling.bInterruptRollingWhenInAir)
+	         GetSettings()->Rolling.bInterruptRollingWhenInAir)
 	{
 		// If the character is currently rolling, then enable ragdolling.
 
@@ -690,7 +690,7 @@ void AAlsCharacter::RefreshRotationMode()
 	{
 		if (LocomotionMode == AlsLocomotionModeTags::InAir)
 		{
-			if (bAiming && Settings->bAllowAimingWhenInAir)
+			if (bAiming && GetSettings()->bAllowAimingWhenInAir)
 			{
 				SetRotationMode(AlsRotationModeTags::Aiming);
 			}
@@ -704,7 +704,7 @@ void AAlsCharacter::RefreshRotationMode()
 
 		// Grounded and other locomotion modes.
 
-		if (bAiming && (!bSprinting || !Settings->bSprintHasPriorityOverAiming))
+		if (bAiming && (!bSprinting || !GetSettings()->bSprintHasPriorityOverAiming))
 		{
 			SetRotationMode(AlsRotationModeTags::Aiming);
 		}
@@ -720,7 +720,7 @@ void AAlsCharacter::RefreshRotationMode()
 
 	if (LocomotionMode == AlsLocomotionModeTags::InAir)
 	{
-		if (bAiming && Settings->bAllowAimingWhenInAir)
+		if (bAiming && GetSettings()->bAllowAimingWhenInAir)
 		{
 			SetRotationMode(AlsRotationModeTags::Aiming);
 		}
@@ -740,11 +740,11 @@ void AAlsCharacter::RefreshRotationMode()
 
 	if (bSprinting)
 	{
-		if (bAiming && !Settings->bSprintHasPriorityOverAiming)
+		if (bAiming && !GetSettings()->bSprintHasPriorityOverAiming)
 		{
 			SetRotationMode(AlsRotationModeTags::Aiming);
 		}
-		else if (Settings->bRotateToVelocityWhenSprinting)
+		else if (GetSettings()->bRotateToVelocityWhenSprinting)
 		{
 			SetRotationMode(AlsRotationModeTags::VelocityDirection);
 		}
@@ -827,7 +827,7 @@ void AAlsCharacter::ApplyDesiredStance()
 			UnCrouch();
 		}
 	}
-	else if (LocomotionAction == AlsLocomotionActionTags::Rolling && Settings->Rolling.bCrouchOnStart)
+	else if (LocomotionAction == AlsLocomotionActionTags::Rolling && GetSettings()->Rolling.bCrouchOnStart)
 	{
 		Crouch();
 	}
@@ -1014,13 +1014,13 @@ bool AAlsCharacter::CanSprint() const
 	// input and if the input direction is aligned with the view direction within 50 degrees.
 
 	if (!LocomotionState.bHasInput || Stance != AlsStanceTags::Standing ||
-	    ((bDesiredAiming || DesiredRotationMode == AlsRotationModeTags::Aiming) && !Settings->bSprintHasPriorityOverAiming))
+	    ((bDesiredAiming || DesiredRotationMode == AlsRotationModeTags::Aiming) && !GetSettings()->bSprintHasPriorityOverAiming))
 	{
 		return false;
 	}
 
 	if (ViewMode != AlsViewModeTags::FirstPerson &&
-	    (DesiredRotationMode == AlsRotationModeTags::VelocityDirection || Settings->bRotateToVelocityWhenSprinting))
+	    (DesiredRotationMode == AlsRotationModeTags::VelocityDirection || GetSettings()->bRotateToVelocityWhenSprinting))
 	{
 		return true;
 	}
@@ -1339,7 +1339,7 @@ void AAlsCharacter::RefreshLocomotionEarly()
 {
 	if (!LocomotionState.bMoving &&
 	    RotationMode == AlsRotationModeTags::VelocityDirection &&
-	    Settings->bInheritMovementBaseRotationInVelocityDirectionRotationMode)
+	    GetSettings()->bInheritMovementBaseRotationInVelocityDirectionRotationMode)
 	{
 		DesiredVelocityYawAngle = FMath::UnwindDegrees(UE_REAL_TO_FLOAT(
 			DesiredVelocityYawAngle + MovementBase.DeltaRotation.Yaw));
@@ -1399,7 +1399,7 @@ void AAlsCharacter::RefreshLocomotion()
 		auto bSendInitialVelocityYawAngle{LocomotionState.bHasVelocity && !bHadVelocity};
 		auto VelocityYawAngleToSend{LocomotionState.VelocityYawAngle};
 
-		if (Settings->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode)
+		if (GetSettings()->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode)
 		{
 			FVector DesiredVelocity;
 			if (AlsCharacterMovement->TryConsumePrePenetrationAdjustmentVelocity(DesiredVelocity) &&
@@ -1436,7 +1436,7 @@ void AAlsCharacter::RefreshLocomotion()
 	// Character is moving if has speed and current acceleration, or if the speed is greater than the moving speed threshold.
 
 	LocomotionState.bMoving = (LocomotionState.bHasInput && LocomotionState.bHasVelocity) ||
-	                          LocomotionState.Speed > Settings->MovingSpeedThreshold;
+	                          LocomotionState.Speed > GetSettings()->MovingSpeedThreshold;
 }
 
 void AAlsCharacter::RefreshLocomotionLate()
@@ -1549,7 +1549,7 @@ void AAlsCharacter::RefreshGroundedRotation(const float DeltaTime)
 				TargetYawAngle = LocomotionState.TargetYawAngle;
 
 				if (MovementBase.bHasRelativeLocation && !MovementBase.bHasRelativeRotation &&
-				    Settings->bInheritMovementBaseRotationInVelocityDirectionRotationMode)
+				    GetSettings()->bInheritMovementBaseRotationInVelocityDirectionRotationMode)
 				{
 					TargetYawAngle = UE_REAL_TO_FLOAT(TargetYawAngle + MovementBase.DeltaRotation.Yaw);
 				}
@@ -1559,7 +1559,7 @@ void AAlsCharacter::RefreshGroundedRotation(const float DeltaTime)
 				// Rotate to the last velocity direction. Rotation of the movement
 				// base handled in the AAlsCharacter::RefreshLocomotionEarly() function.
 
-				TargetYawAngle = Settings->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode
+				TargetYawAngle = GetSettings()->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode
 					                 ? DesiredVelocityYawAngle
 					                 : LocomotionState.VelocityYawAngle;
 			}
@@ -1574,7 +1574,7 @@ void AAlsCharacter::RefreshGroundedRotation(const float DeltaTime)
 		if (RotationMode == AlsRotationModeTags::ViewDirection)
 		{
 			if ((!LocomotionState.bHasInput && LocomotionState.bRotationTowardsLastInputDirectionBlocked) ||
-			    !Settings->bAutoRotateOnAnyInputWhileNotMovingInViewDirectionRotationMode)
+			    !GetSettings()->bAutoRotateOnAnyInputWhileNotMovingInViewDirectionRotationMode)
 			{
 				RefreshTargetYawAngleUsingActorRotation();
 				return;
@@ -1617,7 +1617,7 @@ void AAlsCharacter::RefreshGroundedRotation(const float DeltaTime)
 		LocomotionState.bRotationTowardsLastInputDirectionBlocked = false;
 
 		const auto TargetYawAngle{
-			Settings->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode
+			GetSettings()->bRotateTowardsDesiredVelocityInVelocityDirectionRotationMode
 				? DesiredVelocityYawAngle
 				: LocomotionState.VelocityYawAngle
 		};
@@ -1834,7 +1834,7 @@ void AAlsCharacter::RefreshInAirRotation(const float DeltaTime)
 
 	if (RotationMode == AlsRotationModeTags::VelocityDirection || RotationMode == AlsRotationModeTags::ViewDirection)
 	{
-		switch (Settings->InAirRotationMode) // NOLINT(clang-diagnostic-switch-enum)
+		switch (GetSettings()->InAirRotationMode) // NOLINT(clang-diagnostic-switch-enum)
 		{
 			case EAlsInAirRotationMode::RotateToVelocityOnJump:
 				if (LocomotionState.bMoving)
@@ -1950,4 +1950,10 @@ void AAlsCharacter::RefreshViewRelativeTargetYawAngle()
 {
 	LocomotionState.ViewRelativeTargetYawAngle = FMath::UnwindDegrees(UE_REAL_TO_FLOAT(
 		ViewState.Rotation.Yaw - LocomotionState.TargetYawAngle));
+}
+
+
+UAlsCharacterSettings* AAlsCharacter::GetSettings() const
+{
+	return Settings;
 }
